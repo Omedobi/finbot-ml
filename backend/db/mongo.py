@@ -1,7 +1,7 @@
 import os
 import logging
 from pymongo import MongoClient
-from utils.config import settings
+from backend.utils.config import settings
 
 
 MONGO_URL = os.getenv("MONGO_URL", "mongodb://localhost:27017")

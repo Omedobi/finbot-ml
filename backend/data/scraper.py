@@ -1,34 +1,37 @@
 import requests
 import logging
 import typing, os
-from lxml import etree, html
+import xml.etree.ElementTree as ET
+import re
+from lxml import (etree, html)
 from bs4 import BeautifulSoup
 from io import BytesIO
 
 SEC_BASE = "https://www.sec.gov"
-HEADERS = {"user-agent": "FinancialChatbot/1.0"}
+HEADERS = {"user-agent": "FinancialChatbot/1.0 (ikennaanyawuike@gmail.com)"}
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 def fetch_latest_filings(cik: str, filing_type: str = "10-K", count: int = 10):
     try:
-        url = (f"https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={cik}&type=1{filing_type}&count={count}&output=atom")
+        url = f"https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK={cik}&type={filing_type}&count={count}&output=atom"
         response = requests.get(url, headers=HEADERS, timeout=15)
 
         if response.status_code != 200:
             raise Exception(f"SEC request failed: {response.status_code}")
 
         parser = etree.XMLParser(ns_clean=True, recover=True)
-        tree = etree.parse(BytesIO(response.content), parser)
-        entries = tree.xpath("//entry")
+        root = etree.fromstring(response.content, parser=parser)
+        entries = root.findall(".//{http://www.w3.org/2005/Atom}entry")
 
         filings = []
         for entry in entries:
             title = entry.findtext("{http://www.w3.org/2005/Atom}title")
             updated = entry.findtext("{http://www.w3.org/2005/Atom}updated")
-            link = entry.find("{http://www.w3.org/2005/Atom}link").get("href")
-            
+            link_el = entry.find("{http://www.w3.org/2005/Atom}link")
+            link = link_el.get("href") if link_el is not None else None
+
             filings.append({
                 "title": title,
                 "filing_url": link,
@@ -52,7 +55,7 @@ def fetch_filing_document_url(filing_url: str) -> str:
 
         # Usually the first .htm file is the main filing document
         for href in hrefs:
-            if href.endswith(".htm",".html",".txt"):
+            if href.endswith((".htm",".html",".txt")):
                 return SEC_BASE + href
         raise Exception("No primary filing document found")
     except Exception as e:

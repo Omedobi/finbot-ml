@@ -1,4 +1,3 @@
-# backend/data/parser.py
 import re
 import logging
 import spacy

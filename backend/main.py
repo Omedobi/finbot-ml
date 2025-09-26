@@ -1,12 +1,13 @@
 import logging
 import uvicorn
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from agents.financial_agent import FinancialAgent
-from data.scraper import fetch_latest_filings
-from data.parser import fetch_and_parse_full_filing
-from data.etl import run_etl
-from utils.config import settings
+from backend.agents.financial_agent import FinancialAgent
+from backend.data.scraper import fetch_latest_filings
+from backend.data.parser import fetch_and_parse_full_filing
+from backend.data.etl import run_etl
+from backend.utils.config import settings
 
 # Configure logging
 logging.basicConfig(
@@ -18,6 +19,15 @@ app = FastAPI(title="Financial Chatbot Backend")
 
 # Initialize financial agent (CrewAI/LLM pipeline)
 agent = FinancialAgent()
+
+# Add CORS for frontend access
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Schemas
 class ChatRequest(BaseModel):
@@ -72,4 +82,4 @@ async def etl_endpoint(request: ETLRequest):
 # Local Debug Mode
 if __name__ == "__main__":
     logging.info("Starting FastAPI app in debug mode...")
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run("backend.main:app", host="127.0.0.1", port=8000, reload=True)
